@@ -18,19 +18,33 @@ app.listen(process.env.PORT, function () {
   console.log("hello world");
 });
 
-app.get("/pet", async function (req, res) {
-  const getHTML = async () => {
+app.get("/achievement", async function (req, res) {
+  console.log(req.query.id);
+  const userID = req.query.id;
+  const getHTML = async (topNum) => {
     try {
       const headers = {
         "User-Agent": process.env.USER_API_HEADER,
       };
-      const html = await axios.get(process.env.USER_API_URL, {
-        headers,
-      });
+      const html = await axios.get(
+        process.env.USER_API_URL +
+          userID +
+          process.env.USER_API_URL_QUERY +
+          `${topNum == null ? "" : `&top=${topNum}`}`,
+        {
+          headers,
+        }
+      );
       let List = [];
 
       const $ = cheerio.load(html.data);
       const $bodyList = $(".table-responsive tr");
+      const $nextButton = $("#next_page");
+      if ($nextButton.length) {
+        topNum = $nextButton.attr("href").split("top=")[1];
+      } else {
+        topNum = null;
+      }
       $bodyList
         .filter((i, el) => $(el).find("td.result").has(".result-ac").length > 0)
         .map((i, el) => {
@@ -38,30 +52,44 @@ app.get("/pet", async function (req, res) {
             problemNum: $(el).find("td a.problem_title").text(),
             problemLink: $(el).find("td a.problem_title").attr("href"),
             language: $(el).find("td.time").next("td").text(),
-            solvedTime: new Date(
-              $(el).find("td a.real-time-update").attr("title")
-            ),
+            solvedTime: $(el).find("td a.real-time-update").attr("title"),
           };
         });
-      return List;
+      return { List, topNum };
     } catch (error) {
       console.error(error);
-      return [];
+      return { List: [], topNum: null };
     }
   };
-  const lists = await getHTML();
-  res.json(lists);
+  let topNum = null;
+  let allLists = [];
+  do {
+    let lists = await getHTML(topNum);
+    allLists = [...allLists, ...lists.List];
+    topNum = lists.topNum;
+  } while (topNum !== null);
+  res.json(allLists);
 });
 
-// 누군가 /pet으로 방문하면 pet관련된 안내문을 띄워주자
-// app.get("경로", function (요청, 응답) {
-//   응답.send("펫용품 쇼핑할 수 있는 사이트입니다.");
-// });
-
-// app.get("/beauty", function (req, res) {
-//   res.send("뷰티용품 쇼핑할 수 있는 사이트입니다.");
-// });
-
-// app.get("/", function (req, res) {
-//   res.sendFile(__dirname + "/index.html");
-// });
+app.get("/login", async function (req, res) {
+  console.log(req.query.userId);
+  const getUser = async () => {
+    try {
+      const headers = {
+        "User-Agent": process.env.USER_API_HEADER,
+      };
+      const html = await axios.get(
+        process.env.LOGIN_API_URL + req.query.userId,
+        {
+          headers,
+        }
+      );
+      return html.status;
+    } catch (error) {
+      console.error(error);
+      return error.response.status;
+    }
+  };
+  let result = await getUser();
+  res.json(result);
+});
