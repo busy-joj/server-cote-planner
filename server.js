@@ -2,7 +2,7 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const express = require("express");
 const cors = require("cors");
-
+const serverless = require("serverless-http")
 const app = express();
 
 require("dotenv").config();
@@ -14,9 +14,9 @@ let corsOptions = {
 app.use(cors(corsOptions));
 
 // listen(서버띄울 포트번호, 띄운 후 실행할 코드)
-app.listen(process.env.PORT, function () {
-  console.log("hello world");
-});
+// app.listen(process.env.PORT, function () {
+//   console.log("hello world");
+// });
 
 app.get("/achievement", async function (req, res) {
   console.log(req.query.id);
@@ -93,3 +93,5 @@ app.get("/login", async function (req, res) {
   let result = await getUser();
   res.json(result);
 });
+
+module.exports.handler = serverless(app);
