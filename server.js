@@ -4,6 +4,8 @@ const express = require("express");
 const cors = require("cors");
 
 const app = express();
+const today = new Date();
+const oneYearAgo = new Date(today.setFullYear(today.getFullYear() - 1));
 
 require("dotenv").config();
 let corsOptions = {
@@ -19,47 +21,50 @@ app.listen(process.env.PORT, function () {
 });
 
 app.get("/achievement", async function (req, res) {
-  console.log(req.query.id);
   const userID = req.query.id;
   const getHTML = async (topNum) => {
-    try {
-      const headers = {
-        "User-Agent": process.env.USER_API_HEADER,
-      };
-      const html = await axios.get(
-        process.env.USER_API_URL +
-          userID +
-          process.env.USER_API_URL_QUERY +
-          `${topNum == null ? "" : `&top=${topNum}`}`,
-        {
-          headers,
-        }
-      );
-      let List = [];
-
-      const $ = cheerio.load(html.data);
-      const $bodyList = $(".table-responsive tr");
-      const $nextButton = $("#next_page");
-      if ($nextButton.length) {
-        topNum = $nextButton.attr("href").split("top=")[1];
-      } else {
-        topNum = null;
+    const headers = {
+      "User-Agent": process.env.USER_API_HEADER,
+    };
+    const html = await axios.get(
+      process.env.USER_API_URL +
+        userID +
+        process.env.USER_API_URL_QUERY +
+        `${topNum == null ? "" : `&top=${topNum}`}`,
+      {
+        headers,
       }
+    );
+    let List = [];
+
+    const $ = cheerio.load(html.data);
+    const $bodyList = $(".table-responsive tr");
+    const $nextButton = $("#next_page");
+    if ($nextButton.length) {
+      topNum = $nextButton.attr("href").split("top=")[1];
+    } else {
+      topNum = null;
+    }
+    try {
       $bodyList
         .filter((i, el) => $(el).find("td.result").has(".result-ac").length > 0)
         .map((i, el) => {
-          List[i] = {
-            problemNum: $(el).find("td a.problem_title").text(),
-            problemLink: $(el).find("td a.problem_title").attr("href"),
-            language: $(el).find("td.time").next("td").text(),
-            solvedTime: $(el).find("td a.real-time-update").attr("title"),
-          };
+          const date = $(el).find("td a.real-time-update").attr("title");
+          if(oneYearAgo <= new Date(date.split(" ")[0])){
+            List[i] = {
+              problemNum: $(el).find("td a.problem_title").text(),
+              problemLink: $(el).find("td a.problem_title").attr("href"),
+              language: $(el).find("td.time").next("td").text(),
+              solvedTime: date,
+            };
+          }else{
+            throw List;
+          }
         });
-      return { List, topNum };
-    } catch (error) {
-      console.error(error);
-      return { List: [], topNum: null };
-    }
+        return { List, topNum };
+      } catch (error) {
+        return { List, topNum: null };
+      }
   };
   let topNum = null;
   let allLists = [];
@@ -72,7 +77,6 @@ app.get("/achievement", async function (req, res) {
 });
 
 app.get("/login", async function (req, res) {
-  console.log(req.query.userId);
   const getUser = async () => {
     try {
       const headers = {
@@ -86,7 +90,6 @@ app.get("/login", async function (req, res) {
       );
       return html.status;
     } catch (error) {
-      console.error(error);
       return error.response.status;
     }
   };
