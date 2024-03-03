@@ -2,7 +2,7 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const express = require("express");
 const cors = require("cors");
-const serverless = require("serverless-http")
+// const serverless = require("serverless-http")
 const app = express();
 const today = new Date();
 const oneYearAgo = new Date(today.setFullYear(today.getFullYear() - 1));
@@ -16,12 +16,13 @@ let corsOptions = {
 app.use(cors(corsOptions));
 
 // listen(서버띄울 포트번호, 띄운 후 실행할 코드)
-// app.listen(process.env.PORT, function () {
-//   console.log("hello world");
-// });
+app.listen(process.env.PORT, function () {
+  console.log("hello world", process.env.PORT);
+});
 
 app.get("/achievement", async function (req, res) {
   const userID = req.query.id;
+  console.log(userID)
   const getHTML = async (topNum) => {
     const headers = {
       "User-Agent": process.env.USER_API_HEADER,
@@ -73,7 +74,10 @@ app.get("/achievement", async function (req, res) {
     allLists = [...allLists, ...lists.List];
     topNum = lists.topNum;
   } while (topNum !== null);
-  res.json(allLists);
+  const problemArr = allLists.map(obj => +obj.problemNum)
+  const count = [...new Set(problemArr)].length;
+  console.log(count);
+  res.json({solved_problem: allLists, solved_count: count, solved_recent: +allLists[0].problemNum} );
 });
 
 app.get("/login", async function (req, res) {
@@ -88,7 +92,8 @@ app.get("/login", async function (req, res) {
           headers,
         }
       );
-      return html.status;
+      // return html.status;
+      return {status: html.status}
     } catch (error) {
       return error.response.status;
     }
@@ -97,4 +102,4 @@ app.get("/login", async function (req, res) {
   res.json(result);
 });
 
-module.exports.handler = serverless(app);
+// module.exports.handler = serverless(app);
